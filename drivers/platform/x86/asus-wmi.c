@@ -4737,7 +4737,7 @@ static int asus_wmi_add(struct platform_device *pdev)
 		throttle_thermal_policy_set_default(asus);
 
 	err = platform_profile_setup(asus);
-	if (err)
+	if (err && err != -EEXIST)
 		goto fail_platform_profile_setup;
 
 	err = asus_wmi_sysfs_init(asus->platform_device);
