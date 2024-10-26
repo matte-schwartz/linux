@@ -3996,7 +3996,7 @@ static bool lruvec_is_reclaimable(struct lruvec *lruvec, struct scan_control *sc
 
 /* to protect the working set of the last N jiffies */
 #ifdef CONFIG_CACHY
-static unsigned long lru_gen_min_ttl __read_mostly = 1000;
+static unsigned long lru_gen_min_ttl __read_mostly = 2000;
 #else
 static unsigned long lru_gen_min_ttl __read_mostly;
 #endif
