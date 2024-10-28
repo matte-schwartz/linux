@@ -271,6 +271,7 @@ static void do_idle(void)
 	tick_nohz_idle_enter();
 
 	while (!need_resched()) {
+		rmb();
 
 		/*
 		 * Interrupts shouldn't be re-enabled from that point on until
