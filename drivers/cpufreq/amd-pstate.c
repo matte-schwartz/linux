@@ -468,9 +468,28 @@ static void amd_pstate_update(struct amd_cpudata *cpudata, u32 min_perf,
 			       max_perf, fast_switch);
 }
 
-static int amd_pstate_verify(struct cpufreq_policy_data *policy)
+static int amd_pstate_verify(struct cpufreq_policy_data *policy_data)
 {
-	cpufreq_verify_within_cpu_limits(policy);
+	/*
+	 * Initialize lower frequency limit (i.e.policy->min) with
+	 * lowest_nonlinear_frequency which is the most energy efficient
+	 * frequency. Override the initial value set by cpufreq core and
+	 * amd-pstate qos_requests.
+	 */
+	if (policy_data->min == FREQ_QOS_MIN_DEFAULT_VALUE) {
+		struct cpufreq_policy *policy = cpufreq_cpu_get(policy_data->cpu);
+		struct amd_cpudata *cpudata;
+
+		if (!policy)
+			return -EINVAL;
+
+		cpudata = policy->driver_data;
+		policy_data->min = cpudata->lowest_nonlinear_freq;
+		cpufreq_cpu_put(policy);
+	}
+
+	cpufreq_verify_within_cpu_limits(policy_data);
+	pr_debug("policy_max =%d, policy_min=%d\n", policy_data->max, policy_data->min);
 
 	return 0;
 }
@@ -759,7 +778,7 @@ static int amd_pstate_cpu_init(struct cpufreq_policy *policy)
 		policy->fast_switch_possible = true;
 
 	ret = freq_qos_add_request(&policy->constraints, &cpudata->req[0],
-				   FREQ_QOS_MIN, policy->cpuinfo.min_freq);
+				   FREQ_QOS_MIN, FREQ_QOS_MIN_DEFAULT_VALUE);
 	if (ret < 0) {
 		dev_err(dev, "Failed to add min-freq constraint (%d)\n", ret);
 		goto free_cpudata1;
@@ -1377,13 +1396,6 @@ static int amd_pstate_epp_cpu_offline(struct cpufreq_policy *policy)
 	return 0;
 }
 
-static int amd_pstate_epp_verify_policy(struct cpufreq_policy_data *policy)
-{
-	cpufreq_verify_within_cpu_limits(policy);
-	pr_debug("policy_max =%d, policy_min=%d\n", policy->max, policy->min);
-	return 0;
-}
-
 static int amd_pstate_epp_suspend(struct cpufreq_policy *policy)
 {
 	struct amd_cpudata *cpudata = policy->driver_data;
@@ -1438,7 +1450,7 @@ static struct cpufreq_driver amd_pstate_driver = {
 
 static struct cpufreq_driver amd_pstate_epp_driver = {
 	.flags		= CPUFREQ_CONST_LOOPS,
-	.verify		= amd_pstate_epp_verify_policy,
+	.verify		= amd_pstate_verify,
 	.setpolicy	= amd_pstate_epp_set_policy,
 	.init		= amd_pstate_epp_cpu_init,
 	.exit		= amd_pstate_epp_cpu_exit,
