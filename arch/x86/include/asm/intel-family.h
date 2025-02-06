@@ -47,6 +47,8 @@
 /* Wildcard match for FAM6 so X86_MATCH_VFM(ANY) works */
 #define INTEL_ANY			IFM(X86_FAMILY_ANY, X86_MODEL_ANY)
 
+#define INTEL_PENTIUM_PRO		IFM(6, 0x01)
+
 #define INTEL_FAM6_CORE_YONAH		0x0E
 #define INTEL_CORE_YONAH		IFM(6, 0x0E)
 
@@ -191,6 +193,8 @@
 #define INTEL_FAM6_LUNARLAKE_M		0xBD
 #define INTEL_LUNARLAKE_M		IFM(6, 0xBD)
 
+#define INTEL_PANTHERLAKE_L		IFM(6, 0xCC)
+
 /* "Small Core" Processors (Atom/E-Core) */
 
 #define INTEL_FAM6_ATOM_BONNELL		0x1C /* Diamondville, Pineview */
@@ -256,5 +260,14 @@
 /* Family 5 */
 #define INTEL_FAM5_QUARK_X1000		0x09 /* Quark X1000 SoC */
 #define INTEL_QUARK_X1000		IFM(5, 0x09) /* Quark X1000 SoC */
+
+/* Family 19 */
+#define INTEL_PANTHERCOVE_X		IFM(19, 0x01) /* Diamond Rapids */
+
+/* CPU core types */
+enum intel_cpu_type {
+	INTEL_CPU_TYPE_ATOM = 0x20,
+	INTEL_CPU_TYPE_CORE = 0x40,
+};
 
 #endif /* _ASM_X86_INTEL_FAMILY_H */
