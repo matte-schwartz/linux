@@ -177,7 +177,7 @@ static u32 __mt7996_reg_addr(struct mt7996_dev *dev, u32 addr)
 			continue;
 
 		ofs = addr - dev->reg.map[i].phys;
-		if (ofs > dev->reg.map[i].size)
+		if (ofs >= dev->reg.map[i].size)
 			continue;
 
 		return dev->reg.map[i].mapped + ofs;
@@ -620,6 +620,7 @@ struct mt7996_dev *mt7996_mmio_probe(struct device *pdev,
 		.sta_add = mt7996_mac_sta_add,
 		.sta_remove = mt7996_mac_sta_remove,
 		.update_survey = mt7996_update_channel,
+		.set_channel = mt7996_set_channel,
 	};
 	struct mt7996_dev *dev;
 	struct mt76_dev *mdev;

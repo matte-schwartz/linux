@@ -484,7 +484,7 @@ static u32 __mt7915_reg_addr(struct mt7915_dev *dev, u32 addr)
 			continue;
 
 		ofs = addr - dev->reg.map[i].phys;
-		if (ofs > dev->reg.map[i].size)
+		if (ofs >= dev->reg.map[i].size)
 			continue;
 
 		return dev->reg.map[i].maps + ofs;
@@ -927,8 +927,10 @@ struct mt7915_dev *mt7915_mmio_probe(struct device *pdev,
 		.rx_check = mt7915_rx_check,
 		.rx_poll_complete = mt7915_rx_poll_complete,
 		.sta_add = mt7915_mac_sta_add,
+		.sta_event = mt7915_mac_sta_event,
 		.sta_remove = mt7915_mac_sta_remove,
 		.update_survey = mt7915_update_channel,
+		.set_channel = mt7915_set_channel,
 	};
 	struct mt7915_dev *dev;
 	struct mt76_dev *mdev;
