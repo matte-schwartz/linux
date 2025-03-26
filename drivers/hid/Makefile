@@ -168,4 +168,6 @@ obj-$(INTEL_ISH_FIRMWARE_DOWNLOADER)	+= intel-ish-hid/
 
 obj-$(CONFIG_AMD_SFH_HID)       += amd-sfh-hid/
 
+obj-$(CONFIG_ASUS_ALLY_HID)  += asus-ally-hid/
+
 obj-$(CONFIG_SURFACE_HID_CORE)  += surface-hid/
