@@ -160,7 +160,7 @@ int amdgpu_vcn_sw_init(struct amdgpu_device *adev, int i)
 	}
 
 	if (amdgpu_indirect_sram >= 0) {
-		adev->vcn.indirect_sram = (bool)amdgpu_indirect_sram;
+		adev->vcn.inst[i].indirect_sram = (bool)amdgpu_indirect_sram;
 		dev_warn(adev->dev, "Forcibly set indirect SRAM status to: %d\n",
 			 amdgpu_indirect_sram);
 	}
