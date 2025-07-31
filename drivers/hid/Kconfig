@@ -1424,6 +1424,10 @@ config HID_KUNIT_TEST
 
 	  If in doubt, say "N".
 
+config HID_MSI_CLAW
+	tristate "Manage MSI Claw gamepad device"
+	depends on USB_HID
+
 endmenu
 
 source "drivers/hid/bpf/Kconfig"
