@@ -78,11 +78,8 @@ enum ttm_bo_type {
  * @type: The bo type.
  * @page_alignment: Page alignment.
  * @destroy: Destruction function. If NULL, kfree is used.
- * @kref: Reference count of this buffer object. When this refcount reaches
- * zero, the object is destroyed or put on the delayed delete list.
  * @resource: structure describing current placement.
  * @ttm: TTM structure holding system pages.
- * @deleted: True if the object is only a zombie and already deleted.
  * @bulk_move: The bulk move object.
  * @priority: Priority for LRU, BOs with lower priority are evicted first.
  * @pin_count: Pin count.
@@ -110,16 +107,10 @@ struct ttm_buffer_object {
 	void (*destroy) (struct ttm_buffer_object *);
 
 	/*
-	* Members not needing protection.
-	*/
-	struct kref kref;
-
-	/*
 	 * Members protected by the bo::resv::reserved lock.
 	 */
 	struct ttm_resource *resource;
 	struct ttm_tt *ttm;
-	bool deleted;
 	struct ttm_lru_bulk_move *bulk_move;
 	unsigned priority;
 	unsigned pin_count;
@@ -173,9 +164,6 @@ struct ttm_bo_kmap_obj {
  * @allow_res_evict: Allow eviction of reserved BOs. Can be used when multiple
  * BOs share the same reservation object.
  * faults. Should only be used by TTM internally.
- * @propagate_deadlock: Propagate -EDEADLOCK from ticket-locking during evictions
- * to the caller. When set, callers are expected to back off and repeat the
- * allocation attempt.
  * @resv: Reservation object to allow reserved evictions with.
  * @bytes_moved: Statistics on how many bytes have been moved.
  *
@@ -187,15 +175,19 @@ struct ttm_operation_ctx {
 	bool no_wait_gpu;
 	bool gfp_retry_mayfail;
 	bool allow_res_evict;
-	bool propagate_deadlock;
 	struct dma_resv *resv;
 	uint64_t bytes_moved;
+	/**
+	 * @exec: optional drm_exec object to use for locking BOs and
+	 * tracking which are locked.
+	 */
+	struct drm_exec *exec;
 };
 
-struct ttm_lru_walk;
-
-/** struct ttm_lru_walk_ops - Operations for a LRU walk. */
-struct ttm_lru_walk_ops {
+/**
+ * struct ttm_lru_walk - Structure describing a LRU walk.
+ */
+struct ttm_lru_walk {
 	/**
 	 * process_bo - Process this bo.
 	 * @walk: struct ttm_lru_walk describing the walk.
@@ -207,15 +199,8 @@ struct ttm_lru_walk_ops {
 	 * walk exits when its target is met.
 	 * 0 also indicates success, -EBUSY means this bo was skipped.
 	 */
-	s64 (*process_bo)(struct ttm_lru_walk *walk, struct ttm_buffer_object *bo);
-};
-
-/**
- * struct ttm_lru_walk - Structure describing a LRU walk.
- */
-struct ttm_lru_walk {
-	/** @ops: Pointer to the ops structure. */
-	const struct ttm_lru_walk_ops *ops;
+	s64 (*process_bo)(struct ttm_lru_walk *walk,
+			  struct ttm_buffer_object *bo);
 	/** @ctx: Pointer to the struct ttm_operation_ctx. */
 	struct ttm_operation_ctx *ctx;
 	/** @ticket: The struct ww_acquire_ctx if any. */
@@ -255,7 +240,7 @@ bool ttm_bo_shrink_avoid_wait(void);
  */
 static inline void ttm_bo_get(struct ttm_buffer_object *bo)
 {
-	kref_get(&bo->kref);
+	drm_gem_object_get(&bo->base);
 }
 
 /**
@@ -271,9 +256,19 @@ static inline void ttm_bo_get(struct ttm_buffer_object *bo)
 static inline __must_check struct ttm_buffer_object *
 ttm_bo_get_unless_zero(struct ttm_buffer_object *bo)
 {
-	if (!kref_get_unless_zero(&bo->kref))
+	if (!kref_get_unless_zero(&bo->base.refcount))
 		return NULL;
 	return bo;
+}
+
+/**
+ * ttm_bo_put - release a reference to a struct ttm_buffer_object
+ *
+ * @bo: The buffer object.
+ */
+static inline void ttm_bo_put(struct ttm_buffer_object *bo)
+{
+	drm_gem_object_put(&bo->base);
 }
 
 /**
@@ -415,7 +410,7 @@ int ttm_bo_wait_ctx(struct ttm_buffer_object *bo,
 int ttm_bo_validate(struct ttm_buffer_object *bo,
 		    struct ttm_placement *placement,
 		    struct ttm_operation_ctx *ctx);
-void ttm_bo_put(struct ttm_buffer_object *bo);
+void ttm_bo_fini(struct ttm_buffer_object *bo);
 void ttm_bo_set_bulk_move(struct ttm_buffer_object *bo,
 			  struct ttm_lru_bulk_move *bulk);
 bool ttm_bo_eviction_valuable(struct ttm_buffer_object *bo,

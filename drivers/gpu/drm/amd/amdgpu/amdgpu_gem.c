@@ -198,7 +198,7 @@ static void amdgpu_gem_object_free(struct drm_gem_object *gobj)
 	struct amdgpu_bo *aobj = gem_to_amdgpu_bo(gobj);
 
 	amdgpu_hmm_unregister(aobj);
-	ttm_bo_put(&aobj->tbo);
+	ttm_bo_fini(&aobj->tbo);
 }
 
 int amdgpu_gem_object_create(struct amdgpu_device *adev, unsigned long size,
@@ -283,7 +283,7 @@ static int amdgpu_gem_object_open(struct drm_gem_object *obj,
 	    !amdgpu_vm_is_bo_always_valid(vm, abo))
 		return -EPERM;
 
-	r = amdgpu_bo_reserve(abo, false, NULL);
+	r = amdgpu_bo_reserve(abo, false);
 	if (r)
 		return r;
 
@@ -480,7 +480,7 @@ int amdgpu_gem_create_ioctl(struct drm_device *dev, void *data,
 	}
 
 	if (flags & AMDGPU_GEM_CREATE_VM_ALWAYS_VALID) {
-		r = amdgpu_bo_reserve(vm->root.bo, false, NULL);
+		r = amdgpu_bo_reserve(vm->root.bo, false);
 		if (r)
 			return r;
 
@@ -582,7 +582,7 @@ int amdgpu_gem_userptr_ioctl(struct drm_device *dev, void *data,
 		if (r)
 			goto release_object;
 
-		r = amdgpu_bo_reserve(bo, true, NULL);
+		r = amdgpu_bo_reserve(bo, true);
 		if (r)
 			goto user_pages_done;
 
@@ -716,7 +716,7 @@ int amdgpu_gem_metadata_ioctl(struct drm_device *dev, void *data,
 		return -ENOENT;
 	robj = gem_to_amdgpu_bo(gobj);
 
-	r = amdgpu_bo_reserve(robj, false, NULL);
+	r = amdgpu_bo_reserve(robj, false);
 	if (unlikely(r != 0))
 		goto out;
 
@@ -911,7 +911,7 @@ int amdgpu_gem_va_ioctl(struct drm_device *dev, void *data,
 		      DRM_EXEC_IGNORE_DUPLICATES, 0);
 	drm_exec_until_all_locked(&exec) {
 		if (gobj) {
-			r = drm_exec_lock_obj(&exec, gobj);
+			r = drm_exec_lock_obj(&exec, gobj, false);
 			drm_exec_retry_on_contention(&exec);
 			if (unlikely(r))
 				goto error;
@@ -1005,7 +1005,7 @@ int amdgpu_gem_op_ioctl(struct drm_device *dev, void *data,
 
 	robj = gem_to_amdgpu_bo(gobj);
 
-	r = amdgpu_bo_reserve(robj, false, NULL);
+	r = amdgpu_bo_reserve(robj, false);
 	if (unlikely(r))
 		goto out;
 

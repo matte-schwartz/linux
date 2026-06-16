@@ -128,7 +128,7 @@ static int amdgpu_dma_buf_pin(struct dma_buf_attachment *attach)
 	if (WARN_ON(!domains))
 		return -EINVAL;
 
-	return amdgpu_bo_pin(bo, domains);
+	return amdgpu_bo_pin(bo, NULL, domains);
 }
 
 /**
@@ -271,7 +271,7 @@ static int amdgpu_dma_buf_begin_cpu_access(struct dma_buf *dma_buf,
 		return 0;
 
 	/* move to gtt */
-	ret = amdgpu_bo_reserve(bo, false, NULL);
+	ret = amdgpu_bo_reserve(bo, false);
 	if (unlikely(ret != 0))
 		return ret;
 
