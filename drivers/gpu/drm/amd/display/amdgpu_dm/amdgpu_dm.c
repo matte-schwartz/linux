@@ -9740,16 +9740,24 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_state *state,
 		 * fast updates.
 		 */
 		if (crtc->state->async_flip &&
-		    (acrtc_state->update_type != UPDATE_TYPE_FAST ||
-		     get_mem_type(old_plane_state->fb) != get_mem_type(fb)))
+		    acrtc_state->update_type != UPDATE_TYPE_FAST)
 			drm_warn_once(state->dev,
 				      "[PLANE:%d:%s] async flip with non-fast update\n",
 				      plane->base.id, plane->name);
 
 		bundle->flip_addrs[planes_count].flip_immediate =
 			crtc->state->async_flip &&
-			acrtc_state->update_type == UPDATE_TYPE_FAST &&
-			get_mem_type(old_plane_state->fb) == get_mem_type(fb);
+			acrtc_state->update_type == UPDATE_TYPE_FAST;
+
+		/*
+		 * If the scanout buffer changed memory type (e.g. it migrated
+		 * between the VRAM carveout and GTT under pressure), latch the
+		 * surface address registers atomically via SURFACE_UPDATE_LOCK
+		 * so the primary and DCC meta addresses do not update across the
+		 * VRAM<->GTT aperture boundary in separate, non-atomic writes.
+		 */
+		bundle->flip_addrs[planes_count].address.force_surface_update_lock =
+			get_mem_type(old_plane_state->fb) != get_mem_type(fb);
 
 		immediate_flip |= bundle->flip_addrs[planes_count].flip_immediate;
 

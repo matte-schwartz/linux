@@ -108,6 +108,15 @@ bool hubp3_program_surface_flip_and_addr(
 		if (address->grph.addr.quad_part == 0)
 			break;
 
+		/*
+		 * Defer the latch so the meta and primary addresses update
+		 * together. Without this they are programmed in separate writes,
+		 * which corrupts scanout when the address crosses the VRAM<->GTT
+		 * aperture boundary.
+		 */
+		if (address->force_surface_update_lock)
+			REG_UPDATE(DCSURF_FLIP_CONTROL, SURFACE_UPDATE_LOCK, 1);
+
 		REG_UPDATE_2(DCSURF_SURFACE_CONTROL,
 				PRIMARY_SURFACE_TMZ, address->tmz_surface,
 				PRIMARY_META_SURFACE_TMZ, address->tmz_surface);
@@ -129,6 +138,9 @@ bool hubp3_program_surface_flip_and_addr(
 		REG_SET(DCSURF_PRIMARY_SURFACE_ADDRESS, 0,
 				PRIMARY_SURFACE_ADDRESS,
 				address->grph.addr.low_part);
+
+		if (address->force_surface_update_lock)
+			REG_UPDATE(DCSURF_FLIP_CONTROL, SURFACE_UPDATE_LOCK, 0);
 		break;
 	case PLN_ADDR_TYPE_VIDEO_PROGRESSIVE:
 		if (address->video_progressive.luma_addr.quad_part == 0

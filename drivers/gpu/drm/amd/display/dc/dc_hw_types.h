@@ -69,6 +69,14 @@ enum dc_plane_addr_type {
 struct dc_plane_address {
 	enum dc_plane_addr_type type;
 	bool tmz_surface;
+	/*
+	 * Latch the surface address registers atomically via
+	 * SURFACE_UPDATE_LOCK on this flip. Set when the scanout buffer
+	 * changed memory type (VRAM<->GTT) so the primary and DCC meta
+	 * addresses do not update across the aperture boundary in separate,
+	 * non-atomic register writes.
+	 */
+	bool force_surface_update_lock;
 	union {
 		struct{
 			PHYSICAL_ADDRESS_LOC addr;
