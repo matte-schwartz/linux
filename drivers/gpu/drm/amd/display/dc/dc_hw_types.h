@@ -252,6 +252,13 @@ struct dc_flip_addrs {
 	bool flip_immediate;
 	/* TODO: add flip duration for FreeSync */
 	bool triplebuffer_flips;
+	/*
+	 * Force a non-fast surface update with this flip so the HUBP surface
+	 * descriptor is reprogrammed, e.g. when the scanout buffer's memory
+	 * type changed (VRAM<->GTT) and a bare address flip would leave the
+	 * surface config stale.
+	 */
+	bool surface_reprogram;
 	unsigned int dirty_rect_count;
 	struct rect dirty_rects[DC_MAX_DIRTY_RECTS];
 };

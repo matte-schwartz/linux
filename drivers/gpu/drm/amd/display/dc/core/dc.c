@@ -2821,6 +2821,8 @@ static enum surface_update_type det_surface_update(
 
 	if (u->flip_addr) {
 		update_flags->bits.addr_update = 1;
+		if (u->flip_addr->surface_reprogram)
+			elevate_update_type(&overall_type, UPDATE_TYPE_MED);
 		if (u->flip_addr->address.tmz_surface != u->surface->address.tmz_surface) {
 			update_flags->bits.tmz_changed = 1;
 			elevate_update_type(&overall_type, UPDATE_TYPE_FULL);
@@ -5096,7 +5098,9 @@ static bool full_update_required(struct dc *dc,
 				srf_updates[i].lut3d_func ||
 				srf_updates[i].surface->force_full_update ||
 				(srf_updates[i].flip_addr &&
-				srf_updates[i].flip_addr->address.tmz_surface != srf_updates[i].surface->address.tmz_surface) ||
+				(srf_updates[i].flip_addr->surface_reprogram ||
+				srf_updates[i].flip_addr->address.tmz_surface !=
+				srf_updates[i].surface->address.tmz_surface)) ||
 				(srf_updates[i].cm2_params &&
 				 (srf_updates[i].cm2_params->component_settings.shaper_3dlut_setting != srf_updates[i].surface->mcm_shaper_3dlut_setting ||
 				  srf_updates[i].cm2_params->component_settings.lut1d_enable != srf_updates[i].surface->mcm_lut1d_enable))))

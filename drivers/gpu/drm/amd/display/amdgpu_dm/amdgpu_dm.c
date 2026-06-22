@@ -9751,6 +9751,16 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_state *state,
 			acrtc_state->update_type == UPDATE_TYPE_FAST &&
 			get_mem_type(old_plane_state->fb) == get_mem_type(fb);
 
+		/*
+		 * A memory type change (e.g. the scanout buffer moving between
+		 * the VRAM carveout and GTT under pressure) needs the HUBP
+		 * surface descriptor reprogrammed for the new aperture, not just
+		 * an address flip. Flag it so DC escalates this flip to a
+		 * non-fast (MED) update instead of corrupting scanout.
+		 */
+		bundle->flip_addrs[planes_count].surface_reprogram =
+			get_mem_type(old_plane_state->fb) != get_mem_type(fb);
+
 		immediate_flip |= bundle->flip_addrs[planes_count].flip_immediate;
 
 		timestamp_ns = ktime_get_ns();
