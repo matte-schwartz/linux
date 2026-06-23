@@ -248,6 +248,15 @@ static struct msi_wmi_platform_quirk quirk_gen3 = {
 	.dual_fans = true,
 	.restore_curves = true,
 };
+static struct msi_wmi_platform_quirk quirk_gen4 = {
+	.shift_mode = true,
+	.charge_threshold = true,
+	.dual_fans = true,
+	.restore_curves = true,
+	.pl_min = 8,
+	.pl1_max = 35,
+	.pl2_max = 45
+};
 
 static const struct dmi_system_id msi_quirks[] = {
 	{
@@ -281,6 +290,14 @@ static const struct dmi_system_id msi_quirks[] = {
 			DMI_MATCH(DMI_BOARD_NAME, "MS-1T8K"),
 		},
 		.driver_data = &quirk_gen3,
+	},
+	{
+		.ident = "MSI Claw 8 EX AI+",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Micro-Star International Co., Ltd."),
+			DMI_MATCH(DMI_BOARD_NAME, "MS-1T91"),
+		},
+		.driver_data = &quirk_gen4,
 	},
 };
 
