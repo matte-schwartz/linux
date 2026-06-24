@@ -480,6 +480,10 @@ xe_pt_scan_64K(u64 addr, u64 next, struct xe_pt_stage_bind_walk *xe_walk)
 	if (xe_vma_is_null(xe_walk->vma))
 		return true;
 
+	/* A range that outruns the backing resource cannot use 64K PTEs. */
+	if (next - xe_walk->va_curs_start > curs.remaining)
+		return false;
+
 	xe_res_next(&curs, addr - xe_walk->va_curs_start);
 	for (; addr < next; addr += SZ_64K) {
 		if (!IS_ALIGNED(xe_res_dma(&curs), SZ_64K) || curs.size < SZ_64K)
