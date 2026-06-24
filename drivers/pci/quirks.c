@@ -6382,4 +6382,11 @@ static void quirk_gl975x_mask_replay_timer_timeout(struct pci_dev *pdev)
 }
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_GLI, 0x9750, quirk_gl975x_mask_replay_timer_timeout);
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_GLI, 0x9755, quirk_gl975x_mask_replay_timer_timeout);
+
+/* The RTS5264 reports the errors itself. */
+static void quirk_rts5264_mask_replay_timer_timeout(struct pci_dev *pdev)
+{
+	pci_mask_replay_timer_timeout(pdev, pdev);
+}
+DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_REALTEK, 0x5264, quirk_rts5264_mask_replay_timer_timeout);
 #endif
