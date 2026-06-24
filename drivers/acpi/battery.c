@@ -15,6 +15,7 @@
 #include <linux/jiffies.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
+#include <linux/math64.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
@@ -87,6 +88,11 @@ enum {
 	 * on a full charge, but showing degradation in full charge cap.
 	 */
 	ACPI_BATTERY_QUIRK_DEGRADED_FULL_CHARGE,
+	/* Some ECs report a bogus _BST present rate that does not track the
+	 * actual load (seen on the MSI Claw 8 EX AI+).  Derive the rate from
+	 * the change in remaining capacity over time instead.
+	 */
+	ACPI_BATTERY_QUIRK_DERIVE_RATE,
 };
 
 struct acpi_battery {
@@ -123,6 +129,9 @@ struct acpi_battery {
 	char oem_info[MAX_STRING_LENGTH];
 	int state;
 	int power_unit;
+	int derived_rate;
+	int derive_cap_prev;
+	unsigned long derive_time_prev;
 	unsigned long flags;
 };
 
@@ -149,6 +158,7 @@ static int acpi_battery_technology(struct acpi_battery *battery)
 }
 
 static int acpi_battery_get_state(struct acpi_battery *battery);
+static void acpi_battery_derive_rate(struct acpi_battery *battery);
 
 static int acpi_battery_is_charged(struct acpi_battery *battery)
 {
@@ -618,6 +628,8 @@ static int acpi_battery_get_state(struct acpi_battery *battery)
 	    battery->capacity_now > battery->full_charge_capacity)
 		battery->capacity_now = battery->full_charge_capacity;
 
+	acpi_battery_derive_rate(battery);
+
 	return result;
 }
 
@@ -942,6 +954,56 @@ static void find_battery(const struct dmi_header *dm, void *private)
  *
  * Handle this correctly so that they won't break userspace.
  */
+static const struct dmi_system_id acpi_battery_derive_rate_dmi[] = {
+	{
+		/* MSI Claw 8 EX AI+: EC reports a bogus _BST present rate */
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR,
+				  "Micro-Star International Co., Ltd."),
+			DMI_MATCH(DMI_BOARD_NAME, "MS-1T91"),
+		},
+	},
+	{}
+};
+
+/*
+ * Replace a bogus EC-reported rate with one derived from the change in
+ * remaining capacity over time.  Recomputed whenever the capacity counter
+ * ticks and held steady in between.
+ */
+static void acpi_battery_derive_rate(struct acpi_battery *battery)
+{
+	unsigned long now = jiffies;
+
+	if (!test_bit(ACPI_BATTERY_QUIRK_DERIVE_RATE, &battery->flags))
+		return;
+
+	if (!ACPI_BATTERY_CAPACITY_VALID(battery->capacity_now)) {
+		battery->rate_now = ACPI_BATTERY_VALUE_UNKNOWN;
+		return;
+	}
+
+	if (battery->derive_cap_prev == ACPI_BATTERY_VALUE_UNKNOWN) {
+		battery->derive_cap_prev = battery->capacity_now;
+		battery->derive_time_prev = now;
+		battery->rate_now = ACPI_BATTERY_VALUE_UNKNOWN;
+		return;
+	}
+
+	if (battery->capacity_now != battery->derive_cap_prev) {
+		u64 dcap = abs(battery->derive_cap_prev - battery->capacity_now);
+		unsigned long dt = now - battery->derive_time_prev;
+
+		if (dt)
+			battery->derived_rate = div64_u64(dcap * 3600 * HZ, dt);
+		battery->derive_cap_prev = battery->capacity_now;
+		battery->derive_time_prev = now;
+	}
+
+	battery->rate_now = battery->derived_rate ? battery->derived_rate :
+						    ACPI_BATTERY_VALUE_UNKNOWN;
+}
+
 static void acpi_battery_quirks(struct acpi_battery *battery)
 {
 	if (test_bit(ACPI_BATTERY_QUIRK_PERCENTAGE_CAPACITY, &battery->flags))
@@ -1241,6 +1303,11 @@ static int acpi_battery_probe(struct platform_device *pdev)
 
 	if (acpi_has_method(battery->device->handle, "_BIX"))
 		set_bit(ACPI_BATTERY_XINFO_PRESENT, &battery->flags);
+
+	if (dmi_check_system(acpi_battery_derive_rate_dmi)) {
+		battery->derive_cap_prev = ACPI_BATTERY_VALUE_UNKNOWN;
+		set_bit(ACPI_BATTERY_QUIRK_DERIVE_RATE, &battery->flags);
+	}
 
 	result = acpi_battery_update_retry(battery);
 	if (result)
