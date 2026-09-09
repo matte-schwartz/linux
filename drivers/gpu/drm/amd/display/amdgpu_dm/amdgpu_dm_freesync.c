@@ -253,7 +253,6 @@ void amdgpu_dm_update_freesync_state_on_stream(
 	new_crtc_state->vrr_infopacket = vrr_infopacket;
 
 	new_stream->vrr_infopacket = vrr_infopacket;
-	new_stream->allow_freesync = mod_freesync_get_freesync_enabled(&vrr_params);
 
 	/*
 	 * HDMI ALLM: when Gaming-VRR is active (VRR_EN=1) and the sink
